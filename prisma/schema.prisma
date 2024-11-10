@@ -1,0 +1,30 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// command to run when the schema is updated: npx prisma generate
+
+model Task {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  content     String?
+  assigneeId  Int
+  assignee    Assignee @relation(fields: [assigneeId], references: [id])
+  completed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Assignee {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  tasks Task[]
+}

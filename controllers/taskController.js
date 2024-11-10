@@ -23,7 +23,13 @@ exports.createTask = async (req, res) => {
         }).join('');
 
         const task = await prisma.task.create({
-            data: { title, content: updatedContent, assigneeId: assignee.id, createdAt: new Date(date), completed: false },
+            data: {
+                title,
+                content: updatedContent,
+                assigneeId: assignee.id,
+                createdAt: new Date(date),
+                status: 'NOT_DONE',
+            },
         });
 
         return res.status(201).json({ message: 'Task created successfully' });
@@ -38,14 +44,18 @@ exports.createTask = async (req, res) => {
 exports.getAllTasks = async (req, res) => {
     try {
         const tasks = await prisma.task.findMany({
-            orderBy: [
-                { completed: 'asc' }, // Unchecked tasks appear first
-                { createdAt: 'asc' }  // Then sort by date within each group
-            ],
-            include: {
-                assignee: true, // Includes assignee details
-            },
+            include: { assignee: true },
         });
+
+        const statusOrder = { 'ONGOING': 1, 'NOT_DONE': 2, 'COMPLETED': 3 };
+
+        tasks.sort((a, b) => {
+            if (statusOrder[a.status] === statusOrder[b.status]) {
+                return new Date(a.createdAt) - new Date(b.createdAt);
+            }
+            return statusOrder[a.status] - statusOrder[b.status];
+        });
+
         res.status(200).json(tasks);
     } catch (error) {
         console.error('Error fetching tasks:', error);
@@ -95,13 +105,16 @@ exports.getUserTasksByName = async (req, res) => {
             return res.status(404).json({ error: 'Assignee not found' });
         }
 
+        const statusOrder = { 'ONGOING': 1, 'NOT_DONE': 2, 'COMPLETED': 3 };
+
         //order by completed and then by date
         assignee.tasks.sort((a, b) => {
-            if (a.completed === b.completed) {
-                return a.createdAt < b.createdAt ? -1 : 1;
+            if (statusOrder[a.status] === statusOrder[b.status]) {
+                return new Date(a.createdAt) - new Date(b.createdAt);
             }
-            return a.completed ? 1 : -1;
+            return statusOrder[a.status] - statusOrder[b.status];
         });
+
 
         return res.json(assignee.tasks);
     } catch (error) {
@@ -129,9 +142,12 @@ exports.updateTask = async (req, res) => {
             return res.status(404).json({ error: 'Task not found' });
         }
 
+        const newStatus = task.status === 'NOT_DONE' ? 'ONGOING' :
+            task.status === 'ONGOING' ? 'COMPLETED' : 'NOT_DONE';
+
         const updatedTask = await prisma.task.update({
             where: { id: taskId },
-            data: { completed: !task.completed },
+            data: { status: newStatus }, // Update the status field
         });
 
         return res.json(updatedTask);

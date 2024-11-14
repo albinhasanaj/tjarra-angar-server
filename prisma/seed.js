@@ -11,6 +11,7 @@ const seedAssignees = async () => {
     { name: 'Oscar' },
     { name: 'Leo' },
     { name: 'Axel' },
+    { name: "Hörnell" },
   ];
 
   for (const assignee of assignees) {

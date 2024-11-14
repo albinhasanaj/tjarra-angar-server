@@ -31,6 +31,8 @@ const clearDatabase = async () => {
 const main = async () => {
   await clearDatabase();
   await seedAssignees();
+
+  console.log('Database seeded');
 };
 
 main()

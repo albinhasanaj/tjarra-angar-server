@@ -1,7 +1,10 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+const sendDiscordMessage = require('../utils/discordBot');
+
 exports.createTask = async (req, res) => {
+    console.log("this called")
     try {
         const { name, title, date } = req.body;
         const contentBlocks = JSON.parse(req.body.contentBlocks);
@@ -31,6 +34,15 @@ exports.createTask = async (req, res) => {
                 status: 'NOT_DONE',
             },
         });
+
+        if (!task) {
+            return res.status(500).json({ error: 'Error creating task' });
+        }
+
+        //call the discord bot and send a message
+        console.log("before sending message")
+        const message = `Task ${title} created for ${name}`;
+        sendDiscordMessage(message);
 
         return res.status(201).json({ message: 'Task created successfully' });
     } catch (error) {
@@ -149,6 +161,15 @@ exports.updateTask = async (req, res) => {
             where: { id: taskId },
             data: { status: newStatus }, // Update the status field
         });
+
+        // find the assignee name
+        const assignee = await prisma.assignee.findUnique({
+            where: { id: updatedTask.assigneeId },
+        });
+
+        //call the discord bot and send a message
+        const message = `Task ${updatedTask.title} is now ${updatedTask.status} for ${assignee.name}`;
+        sendDiscordMessage(message);
 
         return res.json(updatedTask);
     } catch (error) {
